@@ -1,19 +1,40 @@
 import { test, expect } from '@playwright/test';
-import { SearchPage } from '../pages/search.page';
 
-test('Add products priced between ₹500 and ₹1000 to cart', async ({ page }) => {
-  const searchPage = new SearchPage(page);
+test.setTimeout(60000);
 
-  // Step 1: Go to site and perform search
-  await page.goto('https://your-ecommerce-site.com'); // Replace with actual URL
-  await searchPage.performSearch('electronics');
-  await searchPage.validateKeywordInResults('electronics');
+test('Add products priced between $5 and $10 to cart', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
-  // Step 2: Add products in ₹500–₹1000 range
-  await searchPage.addProductsInPriceRangeToCart(500, 1000, 10);
+  await page.goto('https://www.saucedemo.com');
+  await page.locator('#user-name').fill('standard_user');
+  await page.locator('#password').fill('secret_sauce');
+  await page.locator('#login-button').click();
+  await page.waitForLoadState('networkidle');
 
-  // Optional: Add light validation (e.g., check that at least one was added)
-  // This can be expanded based on your app's behavior
-  const cartBadge = page.locator('.cart-badge'); // Example: cart item counter
-  await expect(cartBadge).toHaveText(/1|2|3|4|5/); // At least one item added
+  // Add products priced between $5 and $10
+  const products = page.locator('.inventory_item');
+  const count = await products.count();
+
+  let added = 0;
+  for (let i = 0; i < count; i++) {
+    const product = products.nth(i);
+    const priceText = await product.locator('.inventory_item_price').textContent();
+    const price = parseFloat(priceText!.replace('$', ''));
+
+    if (price >= 5 && price <= 10) {
+      await product.locator('button').click();
+      added++;
+    }
+  }
+
+  // Navigate to cart and wait for it to load
+  await page.locator('.shopping_cart_link').click();
+  await page.waitForLoadState('networkidle');
+
+  // Validate the count of added items
+  const cartItems = page.locator('.cart_item');
+  await expect(cartItems).toHaveCount(added);
+
+  await context.close();
 });

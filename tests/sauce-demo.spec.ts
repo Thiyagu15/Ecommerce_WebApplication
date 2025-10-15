@@ -1,10 +1,13 @@
 import { test, expect } from '@playwright/test';
 
-test.setTimeout(60000);
+test.setTimeout(60000); // Increase timeout to 60 seconds
 
-test('Full e-commerce flow with cart validation', async ({ browser }) => {
+test('Sauce Demo - E-commerce Assessment Flow', async ({ browser }) => {
   const context = await browser.newContext();
   const page = await context.newPage();
+
+  const expectedNames: string[] = [];
+  const expectedPrices: number[] = [];
 
   // Step 1: Login
   await page.goto('https://www.saucedemo.com');
@@ -13,9 +16,7 @@ test('Full e-commerce flow with cart validation', async ({ browser }) => {
   await page.locator('#login-button').click();
   await page.waitForLoadState('networkidle');
 
-  // Step 2: Add only specific products (Bike Light and Onesie)
-  const expectedNames: string[] = [];
-  const expectedPrices: number[] = [];
+  // Step 2: Add only specific products
   const products = page.locator('.inventory_item');
   const count = await products.count();
 
@@ -28,6 +29,7 @@ test('Full e-commerce flow with cart validation', async ({ browser }) => {
     if (!name || isNaN(price)) continue;
 
     if (name === 'Sauce Labs Bike Light' || name === 'Sauce Labs Onesie') {
+      console.log(`✅ Adding: ${name} - $${price}`);
       expectedNames.push(name);
       expectedPrices.push(price);
       await product.locator('button').click();
@@ -56,6 +58,7 @@ test('Full e-commerce flow with cart validation', async ({ browser }) => {
   // Step 5: Validate total
   const totalText = await page.locator('.summary_total_label').textContent();
   const total = parseFloat(totalText!.replace('Total: $', ''));
+  const expectedTotal = expectedPrices.reduce((sum, p) => sum + p, 0);
 
   expect(total).toBeCloseTo(19.42, 0.01);
 
